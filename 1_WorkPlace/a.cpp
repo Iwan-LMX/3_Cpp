@@ -13,7 +13,6 @@ int unknown(int A[], int l, int r){
 }
 int main(){
     int A[] = {6, 4, 2, 9, 2, 8, 6, 5};
-    int s;
     printf("%d\n", unknown(A, 1, 8));
     return 0;
 }
