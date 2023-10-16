@@ -61,5 +61,6 @@ int main(void) {
     prim(g, &res);
     //output
     printf("Sum of edge weights in Minimum Spanning Tree: %d", res);
+    freeGraph(g);
     return 0;
 }
