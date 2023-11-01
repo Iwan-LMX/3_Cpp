@@ -1,22 +1,16 @@
-/* 
-    Name: Mingxin Li
-    ID: z5433288
-    Time complexity:
-    Start date: 2023-10-29  
- */
 #include<stdio.h>
 #include<stdlib.h>
 #include <limits.h>
 #include<string.h>
+#include<assert.h>
 #include "PQueue.h"
 typedef struct{
-    char* name;
+    char name[20];
     int transTime;
     int* vertices;
 } station;
 typedef struct{
-    char* stopName;
-    int stationIndex;
+    char stopName[20];
     char time[5];
 }timetable;
 //set several global arguments, which includes the limits n, m, s etc.
@@ -25,21 +19,29 @@ timetable* timetables;
 int n, m, s;
 struct{
     int* bestPred;
-    int bestDistance, bestStart;
+    int bestDistance, bestEnd;
 } res;
 //convert hhmm to minutes
 int convert(char* time);
-//check if the station can transfer
-void addTransfer(int cnt);
+//this function can add new timetable to a station and try to insert transfer route
+void checkPreStops(int cnt, Graph g, Edge e);
 //dijkstra algorithm
 void dijkstra(Graph g, Vertex source, char* to, char* due);
+//output the route
+void showPath(int v, int pred[]);
 int main(){
+/* 
+Name: Mingxin Li
+ID: z5433288
+Time complexity:
+Start date: 2023-10-29  
+*/
     //1. store the stations and transfer time
     printf("Size of network: ");
     scanf("%d", &n);
-    stations = (station*) malloc(sizeof(*stations) * n);
+    stations = (station*)  malloc(sizeof(stations) * n);
+    assert(stations != NULL);
     for(int i=0; i<n; i++){
-        stations[i].name = (char*) malloc(20 * sizeof(char));
         scanf("%s", stations[i].name);
         scanf("%d", &stations[i].transTime);
     }
@@ -47,12 +49,13 @@ int main(){
     //2. store the timetables & create vertex mapping & initialize the graph
     printf("Number of timetables: ");
     scanf("%d", &m);
-    timetables =(timetable*) malloc(m*n* sizeof(*timetables));
-    res.bestPred = (int*) malloc(m*n* sizeof(int));
+    timetables = (timetable*) malloc(sizeof(timetables) * (m*n));
+    assert(timetables != NULL);
+    res.bestPred = malloc(sizeof(int) * (m*n));
     res.bestDistance = INT_MAX;
     for(int i=0; i<n; i++){
-        stations[i].vertices = (int*) malloc(m * sizeof(int));
-        memset(stations[i].vertices, -1, sizeof(int)*m);
+        stations[i].vertices = malloc((m+1) * sizeof(int));
+        memset(stations[i].vertices, -1, sizeof(int)*(m));
     }
     Graph g = newGraph(m*n);
     int cnt = 0; //this is the index of vertices
@@ -62,7 +65,6 @@ int main(){
         printf("Number of stops: ");
         scanf("%d", &s);
         for(int j=0; j<s; j++){
-            timetables[cnt].stopName = (char*) malloc(20 * sizeof(char));
             //update timetables
             scanf("%s", timetables[cnt].stopName);
             scanf("%s", timetables[cnt].time);
@@ -74,12 +76,13 @@ int main(){
             }
             //check if this station has other depart time
             checkPreStops(cnt, g, e);
+            cnt++;
         }
     }
     //3. input start & destination
     char from[20], to[20], due[5];
     printf("\nFrom: ");
-    while(scanf("%s", from) && !strcmp(from, "done")){
+    while(scanf("%s", from) && strcmp(from, "done")){
         printf("To: ");
         scanf("%s", to);
         printf("Arrive at or before: ");
@@ -91,13 +94,16 @@ int main(){
                 //find the shortest path from start
                 int j=0;
                 int source = stations[i].vertices[j];
-                while(source>=0 && strcmp(due, timetables[source].time)>0){
-                    dijkstra(g, source, to, due);
+                while(source>=0 && j<m){
+                    if(strcmp(due, timetables[source].time)>0)
+                        dijkstra(g, source, to, due);
+
+                    source = stations[i].vertices[++j];
                 }
 
                 //output the best plan
                 printf("\n");
-                showPath(res.bestStart, res.bestPred);
+                showPath(res.bestEnd, res.bestPred);
                 break;
             }
         }
@@ -109,15 +115,15 @@ int main(){
     //free the memory
     for(int i=0; i<n; i++){
         free(stations[i].name);
-        freeLL(stations[i].vertices);
+        free(stations[i].vertices);
     }
     free(stations);
     for(int i=0; i<n*m; i++){
-        if(timetables == NULL) break;
         free(timetables[i].stopName);
-        freeLL(timetables[i].time);
+        free(timetables[i].time);
     }
     free(timetables);
+    free(res.bestPred);
     freeGraph(g);
     return 0;
 }
@@ -147,54 +153,57 @@ void checkPreStops(int cnt, Graph g, Edge e){
             }
             //record this vertex to the stations
             stations[i].vertices[j] = cnt;
-            timetables[cnt].stationIndex = i;
             return;
         }                    
     }
 }
 void showPath(int v, int pred[]) {
-   if (pred[v] == -1) {
-      printf("%d", v);
-   } else {
-      showPath(pred[v], pred);
-      printf("-%d", v);
-   }
+    if(pred[v] == -1) {
+        printf("%s %s\n", timetables[v].time, timetables[v].stopName);
+    }else{
+        showPath(pred[v], pred);
+        if(!strcmp(timetables[pred[v]].stopName, timetables[v].stopName)){
+            //change line
+            printf("Change at %s\n", timetables[v].stopName);
+        }
+        printf("%s %s\n", timetables[v].time, timetables[v].stopName);
+    }
 }
 void dijkstra(Graph g, Vertex source, char* to, char* due) {
    int  dist[MAX_NODES];
    int  pred[MAX_NODES];
    bool vSet[MAX_NODES];  // vSet[v] = true <=> v has not been processed
-   int s, t;
+   int i, j;
 
    PQueueInit();
    int nV = numOfVertices(g);
-   for (s = 0; s < nV; s++) {
-      joinPQueue(s);
-      dist[s] = INT_MAX;
-      pred[s] = -1;
-      vSet[s] = true;
+   for (i = 0; i < nV; i++) {
+      joinPQueue(i);
+      dist[i] = INT_MAX;
+      pred[i] = -1;
+      vSet[i] = true;
    }
    dist[source] = 0;
    while (!PQueueIsEmpty()) {
-      s = leavePQueue(dist);
-      vSet[s] = false;
-      for (t = 0; t < nV; t++) {
-         if (vSet[t]) {
-            int weight = adjacent(g,s,t);
-            if (weight > 0 && dist[s] < INT_MAX && dist[s]+weight < dist[t]) {
-               dist[t] = dist[s] + weight;  // relax along (s,t,weight)
-               pred[t] = s;
+      i = leavePQueue(dist);
+      vSet[i] = false;
+      for (j = 0; j < nV; j++) {
+         if (vSet[j]) {
+            int weight = adjacent(g,i,j);
+            if (weight > 0 && dist[i] < INT_MAX && dist[i]+weight < dist[j]) {
+               dist[j] = dist[i] + weight;  // relax along (s,t,weight)
+               pred[j] = i;
             }
          }
       }
    }
-   for (s = 0; s < nV; s++) {
+   for (i = 0; i< nV; i++) {
       //if this node is destination
-      if (!strcmp(timetables[s].stopName, to) && dist[s] < res.bestDistance) {
-         if(strcmp(due, timetables[s].time)>=0){
-            res.bestDistance = dist[s];
+      if (!strcmp(timetables[i].stopName, to) && dist[i] < res.bestDistance) {
+         if(strcmp(due, timetables[i].time)>=0){
+            res.bestDistance = dist[i];
             res.bestPred = pred;
-            res.bestStart = s;
+            res.bestEnd = i;
          }
       }
    }
