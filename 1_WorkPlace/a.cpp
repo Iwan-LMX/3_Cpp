@@ -1,18 +1,14 @@
 #include<bits/stdc++.h>
 using namespace std;
-int unknown(int A[], int l, int r){
-    if(l > r)
-        return -1;
-    else if(l == r) return A[l];
-    else{
-        int q = l + (r - l)/4;
-        int ansL = unknown(A, l, q);
-        int ansR = unknown(A, q+1, r);
-        return ansL > ansR ? ansL:ansR;
-    }
-}
+
 int main(){
-    int A[] = {6, 4, 2, 9, 2, 8, 6, 5};
-    printf("%d\n", unknown(A, 1, 8));
+    char A[20]="1014";
+    char s[5] = "0923";
+    printf("%d\n", strcmp(A, s));
+    if(strcmp(A, s)>0){
+        printf("Hello\n");
+    }else if(strcmp(A, s)<0){
+        printf("2\n");
+    }
     return 0;
 }
