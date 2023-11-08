@@ -1,4 +1,10 @@
-#include <bits/stdc++.h>
+#include <iostream>
+#include <string>
+#include <fstream>
+#include <io.h>
+#include <vector>
+#include <filesystem>
+#include <cstdlib>
 
 using namespace std;
 void judge(string result, string o){
